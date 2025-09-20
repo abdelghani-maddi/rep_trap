@@ -15,6 +15,11 @@ library(tidyverse)
 library(scales)
 library(ggthemes)
 library(patchwork)
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+
 
 
 
@@ -36,7 +41,7 @@ for (year in 1997:2001) {
   }, silent = TRUE)
 }
 all_nfsc <- readRDS("D:/all_nfsc.rds")
-# #df_awards <- readRDS("D:/df_awards.rds")
+# df_awards <- readRDS("D:/df_awards.rds")
 # project_pub <- readRDS("D:/project_pub.rds")
 
 
@@ -177,10 +182,9 @@ ggplot(results_combined2, aes(x = year, y = oa_rate, color = group)) +
 ######################################
 ##########
 # Revues OpenAlex
-
-# The package ggtext needs to be installed to run this chunk
 library(ggtext)
 library(openalexR)
+
 jours_all <- oa_fetch(
   entity = "sources",
   works_count = ">10",
@@ -341,21 +345,15 @@ plot_counts + plot_share + plot_layout(ncol = 1)
 ###########
 # other_publishers_na <- jours_all %>%
 #   filter(is.na(country_code) & type == "journal")
-# (ils sont très majoritairement des revues chinoises ou régionales)
+# (elles sont très majoritairement des revues chinoises ou régionales)
 
 ###########
 # distribution impact des revues par type éditeur
-
 
 impact_jours <- all_nsfc_augmented %>%
   select(so_id, group, impact_2yr, h_index) %>%
   unique()
 
-# library
-library(ggridges)
-library(ggplot2)
-library(viridis)
-library(hrbrthemes)
 
 ## Réordonnancement de all_nsfc_augmented$group
 all_nsfc_augmented <- all_nsfc_augmented %>%
@@ -871,10 +869,6 @@ library(fixest)
 library(dplyr)
 library(purrr)
 
-
-
-
-
 ## is indexed in wos or scopus
 jours_all$is_indexed <- ifelse(jours_all$issn_l %in% wos$wos_issn |
                                  jours_all$issn_l %in% scopus$scopus_issn, 1, 0)
@@ -1000,19 +994,17 @@ total_pubs <- bind_rows(authors_cas, authors_non_cas) %>%
   select(pub_id) %>%
   unique() %>%
   count()
-# after correction 2,050,088
+# after correction 2,050,088 publications distinctes
 
+# > n_distinct(panel_data_2016_24$au_id)
+# [1] 236078 auteurs distincts
+# > n_distinct(panel_data_2016_24$source_id)
+# [1] 10006 revues distinctes
 
 ### old 
 # 213015 distinct authors
 # 9950 sources id (revues)
 ###
-
-# > n_distinct(panel_data_2016_24$au_id)
-# [1] 236078
-# > n_distinct(panel_data_2016_24$source_id)
-# [1] 10006
-
 ###
 
 # Réordonnancement des facteurs
