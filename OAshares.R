@@ -339,6 +339,92 @@ plot_share <- ggplot(pubs_by_group, aes(x = publication_year, y = share, fill = 
 # Affichage côte à côte
 plot_counts + plot_share + plot_layout(ncol = 1)
 
+##########
+##########
+##########
+
+library(ggplot2)
+library(scales)
+library(viridisLite)  # pour palettes inclusives
+library(patchwork)
+
+library(ggplot2)
+library(scales)
+library(viridisLite)
+library(patchwork)
+
+# Palette inclusive avec Grey publishers en gris
+groups <- unique(pubs_by_group$group)
+base_colors <- viridis(length(groups) - 1, option = "D", begin = 0.1, end = 0.9)
+publisher_colors <- setNames(c("grey40", base_colors), groups)
+
+# Paramètres de thème (texte plus grand)
+big_theme <- theme_minimal(base_family = "Lato") +
+  theme(
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    axis.title = element_text(size = 15),
+    axis.text = element_text(size = 13),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 12)
+  )
+
+# Plot A
+plot_counts <- ggplot(pubs_by_group, aes(x = publication_year, y = n, fill = group)) +
+  geom_area(alpha = 0.9) +
+  scale_fill_manual(values = publisher_colors) +
+  scale_y_continuous(labels = comma_format()) +
+  labs(
+    title = "Absolute number of NSFC publications by publisher group (A)",
+    x = "Publication Year",
+    y = "Number of publications",
+    fill = "Publisher group"
+  ) +
+  scale_x_continuous(breaks = 2005:2024) +
+  big_theme
+
+# Plot B
+plot_share <- ggplot(pubs_by_group, aes(x = publication_year, y = share, fill = group)) +
+  geom_area(alpha = 0.9) +
+  geom_vline(xintercept = c(2013, 2019, 2022),
+             linetype = "dashed", color = "gray30", linewidth = 0.8) +
+  scale_fill_manual(values = publisher_colors) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  labs(
+    title = "Relative shares of NSFC publications by publisher group (B)",
+    x = "Publication Year",
+    y = "Share of publications (%)",
+    fill = "Publisher group"
+  ) +
+  scale_x_continuous(breaks = 2005:2024) +
+  
+  # Annotations avec fond semi-transparent pour plus de lisibilité
+  annotate("label", x = 2012.5, y = 0.3,
+           label = "Rise of Hindawi\n(2011–2013)",
+           size = 4, fontface = "italic", fill = "grey20", color = "white") +
+  annotate("label", x = 2018, y = 0.2,
+           label = "Rise of MDPI and Frontiers\n(2015-2021)",
+           size = 4, fontface = "italic", fill = "grey20", color = "white") +
+  annotate("label", x = 2020, y = 0.75,
+           label = "Research\nassessment\nreform\n(2020)",
+           size = 4, fontface = "italic", fill = "grey90", color = "black") +
+  annotate("label", x = 2022, y = 0.3,
+           label = "Collapse of MDPI\nand Frontiers\n(after 2022)",
+           size = 4, fontface = "italic", fill = "grey20", color = "white") +
+  
+  big_theme
+
+# Affichage (plots plus grands et espacés)
+(plot_counts / plot_share) +
+  plot_layout(heights = c(1, 1.2))  # plus de place au graphique B
+
+
+##########
+##########
+##########
+
+
+
 ###########
 # other_publishers_na <- jours_all %>%
 #   filter(is.na(country_code) & type == "journal")
@@ -500,11 +586,28 @@ oa_status_group <- oa_status_group %>%
 #   summarise(nb = sum(test_sum))# ça doit être au plus ≈1 (100%)
 
 # Total global annuel par statut OA (pour le graph 3)
-oa_status_total_year <- all_nsfc_augmented %>%
-  group_by(publication_year, oa_status) %>%
-  summarise(n = n(), .groups = "drop") %>%
+all_nsfc_augmented2 <- all_nsfc_augmented %>%
+  mutate(
+    oa_status_recode = case_when(
+      oa_status == "gold" & group == "Grey publishers" ~ "gold_grey",
+      oa_status == "gold" & group != "Grey publishers" ~ "gold_other",
+      TRUE ~ oa_status
+    )
+  )
+
+oa_status_evol <- all_nsfc_augmented2 %>%
+  filter(publication_year > 2004 & oa_status_recode != "closed") %>%
+  count(publication_year, oa_status_recode) %>%
   group_by(publication_year) %>%
-  mutate(share = n / sum(n))
+  mutate(share = n / sum(n)) %>%
+  ungroup()
+
+
+oa_status_total_year_vrif <- oa_status_evol %>%
+  group_by(publication_year) %>%
+  summarise(sum = sum(share))
+
+write.xlsx(oa_status_evol, "D:/oa_status_evol.xlsx")
 
 # Pour graph 4 : part au sein des OA uniquement
 oa_only <- all_nsfc_augmented %>%
@@ -1024,6 +1127,16 @@ panel_data_2016_24 %>%
   group_by(publication_year) %>%
   summarise(moy = mean(n_pubs))
 
+### 
+## Réordonnancement de panel_data_2016_24$publisher_group
+panel_data_2016_24$publisher_group <- panel_data_2016_24$publisher_group %>%
+  fct_relevel(
+    "Other (International)", 
+    "Top 5 publishers",
+    "Other (Domestic/Regional)", 
+    "Grey publishers"
+  )
+
 # Effet global
 mod_core <- feols( n_pubs ~ listed*post + publisher_group + is_oa + 
                      mean_citedness_2yr + main_concept + is_indexed 
@@ -1055,6 +1168,44 @@ summary(mod_es)
 
 iplot(mod_es, ref.line = 0, main = "Event-study: CAS listing impact")
 ###
+library(broom)
+library(dplyr)
+
+event_df <- broom::tidy(mod_es, conf.int = TRUE)
+
+event_df <- event_df %>%
+  filter(grepl("publication_year", term)) %>%
+  mutate(
+    year = as.numeric(gsub("publication_year::([0-9]{4}):listed", "\\1", term))
+  )
+
+
+library(ggplot2)
+library(viridisLite)
+
+ggplot(event_df, aes(x = year, y = estimate)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  geom_vline(xintercept = 2020, linetype = "dashed", color = "gray30") +
+  geom_point(size = 3, color = viridis(1, begin = 0.6)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high),
+                width = 0.2, color = viridis(1, begin = 0.6)) +
+  scale_x_continuous(breaks = seq(min(event_df$year), max(event_df$year), 1)) +
+  labs(
+    title = "Event-study: CAS listing impact",
+    subtitle = "OLS estimates with 95% confidence intervals",
+    x = "Year",
+    y = "Estimated effect on publications (listed vs non-listed)"
+  ) +
+  theme_minimal(base_family = "Lato") +
+  theme(
+    plot.title = element_text(face = "bold", size = 18, hjust = 0.5),
+    plot.subtitle = element_text(size = 14, hjust = 0.5),
+    axis.title = element_text(size = 15),
+    axis.text = element_text(size = 13),
+    panel.grid.minor = element_blank()
+  )
+
+
 
 ###
 # --- 2. Moyenne de publications par groupe (treated / non-treated) ---
@@ -1065,8 +1216,8 @@ moyennes_grp <- panel_data_2016_24 %>%
 # --- 3. Graphique ---
 ggplot(moyennes_grp, aes(x = publication_year, y = moy_pubs,
                          color = factor(listed), group = listed)) +
-  geom_line(size = 1.2) +
-  geom_point(size = 2) +
+  geom_line(size = 3) +
+  geom_point(size = 5) +
   geom_vline(xintercept = 2020, linetype = "dashed", color = "black") +
   scale_color_manual(values = c("0" = "steelblue", "1" = "firebrick"),
                      labels = c("0" = "Non-listed journals", "1" = "Listed journals (CAS)")) +
