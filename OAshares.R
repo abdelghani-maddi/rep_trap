@@ -190,6 +190,8 @@ jours_all <- oa_fetch(
 saveRDS(jours_all, "D:/jours_all_oax.rds")
 jours_all <- readRDS("D:/jours_all_oax.rds")
 
+# on a extrait donc revues de openalex.
+
 #####################################
 #####################################
 #####################################
@@ -267,6 +269,65 @@ all_nsfc_augmented <- all_nsfc_augmented %>%
 
 saveRDS(all_nsfc_augmented, "D:/all_nsfc_augmented.rds")
 all_nsfc_augmented <- readRDS("D:/all_nsfc_augmented.rds")
+
+
+all_nsfc_augmented %>%
+  filter(publication_year > 2004) %>%
+  select(id) %>%
+  unique() %>%
+  count()
+
+library(gtsummary)
+
+sampl <- all_nsfc_augmented %>%
+  as.data.frame() %>%
+  filter(publication_year > 2004) %>%
+  select(id, group, is_) %>% 
+  unique()
+
+
+# Création du tableau résumé
+table_res <- sampl %>%
+  labelled::set_variable_labels(
+    group = "Publishers groups") %>%
+  tbl_summary(
+    include = c(group)
+  ) %>%
+  modify_header(
+    list(label ~ "**Variable**")
+  ) %>%
+  bold_labels()
+
+# Conversion du tableau en objet flextable
+table_flex <- as_flex_table(table_res)
+
+# Exportation en fichier Word dans D:/
+flextable::save_as_docx(
+  table_flex,
+  path = "D:/table_summary.docx"
+)
+
+# Message de confirmation
+cat("✅ Le fichier Word a été exporté dans D:/table_summary.docx\n")
+
+  
+#########################
+#########################
+#########################
+
+market_share <- all_nsfc_augmented %>%
+  select(id, publication_year, group) %>%
+  distinct() %>%  # unique() ou distinct(), même effet
+  group_by(publication_year, group) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  group_by(publication_year) %>%
+  mutate(share = n / sum(n)) %>%
+  ungroup()
+write.xlsx(market_share, "D:/market_share.xlsx")
+
+#########################
+#########################
+#########################
 
 # Étape 3 : agrégation
 pubs_by_group <- all_nsfc_augmented %>%
@@ -494,7 +555,7 @@ ggplot(impact_jours, aes(x = log(1+h_index), y = fct_reorder(group, h_index, .fu
 
 ## Nombre de publications
 oa_status_group <- all_nsfc_augmented %>%
-  #filter(!(oa_status == "closed")) %>%
+  # filter(!(oa_status == "closed")) %>%
   group_by(group, oa_status, publication_year) %>%
   summarise(nbr = n())
 
@@ -1101,10 +1162,6 @@ total_pubs <- bind_rows(authors_cas, authors_non_cas) %>%
 # > n_distinct(panel_data_2016_24$source_id)
 # [1] 10006 revues distinctes
 
-### old 
-# 213015 distinct authors
-# 9950 sources id (revues)
-###
 ###
 
 # Réordonnancement des facteurs
