@@ -1240,12 +1240,12 @@ event_df <- event_df %>%
 library(ggplot2)
 library(viridisLite)
 
-ggplot(event_df, aes(x = year, y = estimate)) +
+ggplot(event_df, aes(x = year, y = estimate, color = estimate > 0)) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   geom_vline(xintercept = 2020, linetype = "dashed", color = "gray30") +
-  geom_point(size = 3, color = viridis(1, begin = 0.6)) +
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high),
-                width = 0.2, color = viridis(1, begin = 0.6)) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) +
+  scale_color_manual(values = c("FALSE" = "red", "TRUE" = "black")) +
   scale_x_continuous(breaks = seq(min(event_df$year), max(event_df$year), 1)) +
   labs(
     title = "Event-study: CAS listing impact",
@@ -1259,9 +1259,9 @@ ggplot(event_df, aes(x = year, y = estimate)) +
     plot.subtitle = element_text(size = 14, hjust = 0.5),
     axis.title = element_text(size = 15),
     axis.text = element_text(size = 13),
-    panel.grid.minor = element_blank()
+    panel.grid.minor = element_blank(),
+    legend.position = "none"
   )
-
 
 
 ###
