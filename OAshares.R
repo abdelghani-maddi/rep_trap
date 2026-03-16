@@ -17,27 +17,36 @@ library(ggridges)
 library(viridis)
 library(hrbrthemes)
 
-
+library(openalexR)
 
 
 # data from worksOA.R
-for (year in 1997:2001) {
+for (year in 1997:2025) {
   cat("Fetching data for year:", year, "\n")
   
+  # # Tenter de récupérer les données pour l’année en cours
+  # try({
+  #   all_nfsc <- oa_fetch(
+  #     entity = "works",
+  #     grants.funder = "f4320321001",
+  #     publication_year = year,
+  #     verbose = TRUE
+  #   )
   # Tenter de récupérer les données pour l’année en cours
   try({
-    all_nfsc <- oa_fetch(
+    all_nfsc_v2 <- oa_fetch(
       entity = "works",
-      grants.funder = "f4320321001",
+      funders.id = "f4320321001",
       publication_year = year,
       verbose = TRUE
-    )
-    
+    )    
     # Enregistrement du fichier RDS
-    saveRDS(works_nsfc, file = paste0("works_nsfc_", year, ".rds"))
+    saveRDS(works_nsfc_v2, file = paste0("works_nsfc_v2_", year, ".rds"))
   }, silent = TRUE)
 }
-all_nfsc <- readRDS("D:/all_nfsc.rds")
+all_nfsc <- readRDS("D:/all_nfsc_v2.rds")
+
+
 # df_awards <- readRDS("D:/df_awards.rds")
 # project_pub <- readRDS("D:/project_pub.rds")
 
@@ -156,7 +165,7 @@ oa_by_year <- all_nfsc %>%
 results_combined <- bind_rows(results_all, oa_by_year)
 
 results_combined2 <- results_combined %>%
-  filter(year < 2025 & !group == "NSFC (China)" & year > 2004)
+  filter(year <= 2025 & !group == "NSFC (China)" & year > 2004)
 
 ggplot(results_combined2, aes(x = year, y = oa_rate, color = group)) +
   geom_line(size = 3) +  # <- ici on augmente l'épaisseur
@@ -171,7 +180,7 @@ ggplot(results_combined2, aes(x = year, y = oa_rate, color = group)) +
   theme_minimal() +
   theme(legend.position = "bottom")  +
   scale_x_continuous(
-    breaks = 2005:2024,
+    breaks = 2005:2025,
     expand = expansion(mult = c(0.01, 0.01))  # add space for labels
   )
 
@@ -182,12 +191,12 @@ ggplot(results_combined2, aes(x = year, y = oa_rate, color = group)) +
 library(ggtext)
 library(openalexR)
 
-jours_all <- oa_fetch(
-  entity = "sources",
-  works_count = ">10",
-  verbose = TRUE
-)
-saveRDS(jours_all, "D:/jours_all_oax.rds")
+# jours_all <- oa_fetch(
+#   entity = "sources",
+#   works_count = ">10",
+#   verbose = TRUE
+# )
+# saveRDS(jours_all, "D:/jours_all_oax.rds")
 jours_all <- readRDS("D:/jours_all_oax.rds")
 
 # on a extrait donc revues de openalex.
@@ -833,6 +842,7 @@ authors_df <- readRDS("D:/authors_df.rds")
 #####################
 
 # Revues douteuses https://mp.weixin.qq.com/s?__biz=MzI1MzA2MzM1NA==&mid=2659567089&idx=1&sn=f4cad93ba3a425524eb19d25ffb25960&chksm=f2ab5c24c5dcd53275aa36b9167d9788577a6a919e2bc80b1144088ea78b32bae8350535b344&scene=0&xtrack=1
+# Lien mises à jour : https://ewl.fenqubiao.com/#/en/early-warning-journal-list-2020
 revues_cas_brut <- c(
   "Metals",
   "Coatings",
