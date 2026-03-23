@@ -21,30 +21,147 @@ library(openalexR)
 
 
 # data from worksOA.R
-for (year in 1997:2025) {
-  cat("Fetching data for year:", year, "\n")
+# for (year in 1997:1999) {
+#   cat("Fetching data for year:", year, "\n")
+# 
+#   # Tenter de récupérer les données pour l’année en cours
+#   try({
+#     all_nfsc_v2 <- oa_fetch(
+#       entity = "works",
+#       funders.id = "f4320321001",
+#       publication_year = year,
+#       verbose = TRUE
+#     )    
+#     # Enregistrement du fichier RDS
+#     saveRDS(works_nsfc_v2, file = paste0("works_nsfc_v2_", year, ".rds"))
+#   }, silent = TRUE)
+# }
+# all_nfsc <- readRDS("D:/all_nfsc_v2.rds")
+
+# for (year in 1998:1999) {
+#   cat("Fetching data for year:", year, "\n")
+#   
+#   try({
+#     works_nsfc_v2 <- oa_fetch(
+#       entity = "works",
+#       funders.id = "f4320321001",
+#       publication_year = year,
+#       verbose = TRUE
+#     )
+#     
+#     saveRDS(
+#       works_nsfc_v2,
+#       file = paste0("works_nsfc_v2_", year, ".rds")
+#     )
+#     
+#     cat("Saved:", paste0("works_nsfc_v2_", year, ".rds"), "\n")
+#     
+#   }, silent = FALSE)
+# }
+
+############
+############
+library(openalexR)
+
+# Dossier de sauvegarde
+out_dir <- "data_nsfc"
+if (!dir.exists(out_dir)) dir.create(out_dir)
+
+# Vecteur pour stocker un petit journal d'exécution
+log_list <- list()
+
+for (year in 2018:2019) {
   
-  # # Tenter de récupérer les données pour l’année en cours
-  # try({
-  #   all_nfsc <- oa_fetch(
-  #     entity = "works",
-  #     grants.funder = "f4320321001",
-  #     publication_year = year,
-  #     verbose = TRUE
-  #   )
-  # Tenter de récupérer les données pour l’année en cours
-  try({
-    all_nfsc_v2 <- oa_fetch(
-      entity = "works",
-      funders.id = "f4320321001",
-      publication_year = year,
-      verbose = TRUE
-    )    
-    # Enregistrement du fichier RDS
-    saveRDS(works_nsfc_v2, file = paste0("works_nsfc_v2_", year, ".rds"))
-  }, silent = TRUE)
+  file_name <- file.path(out_dir, paste0("works_nsfc_v2_", year, ".rds"))
+  
+  cat("\n=============================\n")
+  cat("Année :", year, "\n")
+  cat("Fichier :", file_name, "\n")
+  
+  # Si le fichier existe déjà, on passe
+  if (file.exists(file_name)) {
+    cat("Déjà téléchargé, on saute.\n")
+    
+    log_list[[as.character(year)]] <- data.frame(
+      year = year,
+      status = "skipped_exists",
+      n_obs = NA,
+      time_sec = NA,
+      file = file_name,
+      stringsAsFactors = FALSE
+    )
+    
+    next
+  }
+  
+  # Chronométrage
+  t0 <- Sys.time()
+  
+  # Essai de récupération
+  res <- tryCatch(
+    {
+      works_nsfc_v2 <- oa_fetch(
+        entity = "works",
+        funders.id = "f4320321001",
+        publication_year = year,
+        verbose = TRUE
+      )
+      
+      # Sauvegarde
+      saveRDS(works_nsfc_v2, file = file_name)
+      
+      n_obs <- nrow(works_nsfc_v2)
+      elapsed <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
+      
+      cat("Téléchargement terminé.\n")
+      cat("Nombre de lignes :", n_obs, "\n")
+      cat("Temps écoulé :", round(elapsed, 2), "secondes\n")
+      
+      data.frame(
+        year = year,
+        status = "success",
+        n_obs = n_obs,
+        time_sec = elapsed,
+        file = file_name,
+        stringsAsFactors = FALSE
+      )
+    },
+    error = function(e) {
+      elapsed <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
+      
+      cat("Erreur pour l'année", year, ":\n")
+      cat(conditionMessage(e), "\n")
+      cat("Temps écoulé avant erreur :", round(elapsed, 2), "secondes\n")
+      
+      data.frame(
+        year = year,
+        status = paste0("error: ", conditionMessage(e)),
+        n_obs = NA,
+        time_sec = elapsed,
+        file = file_name,
+        stringsAsFactors = FALSE
+      )
+    }
+  )
+  
+  log_list[[as.character(year)]] <- res
+  
+  # Petite pause pour éviter d'enchaîner trop brutalement les requêtes
+  Sys.sleep(1)
 }
-all_nfsc <- readRDS("D:/all_nfsc_v2.rds")
+
+# Journal final
+log_df <- do.call(rbind, log_list)
+
+# Sauvegarde du journal
+write.csv(log_df,
+          file = file.path(out_dir, "download_log.csv"),
+          row.names = FALSE)
+
+log_df
+
+#########
+#########
 
 
 # df_awards <- readRDS("D:/df_awards.rds")
