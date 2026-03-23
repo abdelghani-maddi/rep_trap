@@ -61,7 +61,6 @@ library(openalexR)
 
 ############
 ############
-library(openalexR)
 
 # Dossier de sauvegarde
 out_dir <- "data_nsfc"
@@ -70,7 +69,7 @@ if (!dir.exists(out_dir)) dir.create(out_dir)
 # Vecteur pour stocker un petit journal d'exécution
 log_list <- list()
 
-for (year in 2018:2019) {
+for (year in 2020:2020) {
   
   file_name <- file.path(out_dir, paste0("works_nsfc_v2_", year, ".rds"))
   
