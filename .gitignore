@@ -3,3 +3,13 @@
 .RData
 .Ruserdata
 .Renviron
+.Rproj.user_old
+data_nsfc
+data_nsfc_gemass
+figures_nsfc_description
+figures_nsfc_early_warning
+figures_nsfc_ewl_cohorts
+figures_nsfc_ewl_refined
+figures_nsfc_publishers
+outputs_did_reputation_trap
+rep_trap.Rproj
